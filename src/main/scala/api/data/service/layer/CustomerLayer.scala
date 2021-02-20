@@ -1,5 +1,6 @@
-package api.data
+package api.data.service.layer
 
+import api.data.Profile
 import api.data.modules.CustomerModule
 import slick.jdbc.JdbcProfile
 

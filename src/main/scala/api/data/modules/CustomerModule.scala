@@ -3,8 +3,10 @@ package api.data.modules
 import api.data.{Profile, modules}
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
+import scala.util.Try
 
-case class FatCustomer(forename: String, surname: String, email: String, password: String)
+case class FatCustomer(forename: String, surname: String, email: String, password: String, id: Long = 0L)
 
 trait CustomerModule { self: Profile =>
 
@@ -39,7 +41,7 @@ trait CustomerModule { self: Profile =>
   final class CustomerLoginTable(tag: Tag) extends Table[CustomerLogin](tag, "customer_login") {
 
     def id = column[PK[CustomerLoginTable]]("ID", O.PrimaryKey, O.AutoInc)
-    def email = column[String]("EMAIL")
+    def email = column[String]("EMAIL", O.Unique)
     def password = column[String]("PASSWORD")
 
     def * = (email, password, id).mapTo[CustomerLogin]
@@ -110,7 +112,7 @@ trait CustomerModule { self: Profile =>
           customerLinks.createCustomerLinks(CustomerLink(customerPk, loginPk))
         })
       })
-      db.run(insertedCustomerLinksTable)
+      db.run(insertedCustomerLinksTable.transactionally)
     }
 
     def readCustomerByLinkTableId(id: Long) = {
@@ -120,7 +122,7 @@ trait CustomerModule { self: Profile =>
         createFatCustomerFromLinks(l)
       })
 
-      db.run(query)
+      db.run(query.transactionally)
     }
 
     def readCustomerById(id: Long) = {
@@ -130,7 +132,21 @@ trait CustomerModule { self: Profile =>
         createFatCustomerFromLinks(l)
       })
 
-      db.run(query)
+      db.run(query.transactionally)
+    }
+
+    def readCustomerByEmail(email: String): Future[Try[FatCustomer]] = {
+      val customerLoginDetails = customerLogins.filter(_.email === email)
+
+      val cLinks = customerLoginDetails.result.head.flatMap(l => {
+        customerLinks.filter(_.customerLoginId === l.id).result.head
+      })
+
+      val query = cLinks.flatMap(l => {
+        createFatCustomerFromLinks(l)
+      })
+
+      db.run(query.transactionally.asTry)
     }
 
     private def createFatCustomerFromLinks(links: CustomerLink) = {
