@@ -1,7 +1,6 @@
 package api.data.modules
 
 import api.data.{Profile, modules}
-import slick.lifted.Query
 
 import scala.concurrent.Future
 import scala.util.Try
@@ -56,7 +55,7 @@ trait MovieModule { self: Profile =>
     // instances of the case class.
     //  - mapTo creates a two-way mapping between the fields in User and the database columns in UserTable
     //  def * = (id, fName, lName, age) <>(User.tupled, User.unapply)
-    def * = (title, description, price, id).mapTo[Movie]
+    def * = (title, description, price, ageRating, id).mapTo[Movie]
   }
 
   object movies extends TableQuery(new MovieTable(_)) {
@@ -66,13 +65,13 @@ trait MovieModule { self: Profile =>
     lazy val numOfMovies = this.distinct.size
     lazy val dropMoviesTable = this.schema.dropIfExists
     lazy val createMoviesTable = this.schema.createIfNotExists
-    lazy val initialDataInsert = this ++= initialData
-
-    def initialData = Seq(
-      Movie("Fake", "Fake movie", 1500, AGE_PG, PK[MovieTable](0)),
-      Movie("Fake Four", "Fake movie 4", 1100, AGE_18, PK[MovieTable](0)),
-      Movie("Fake Three", "Fake movie 3", 1300, AGE_PG, PK[MovieTable](0))
-    )
+//    lazy val initialDataInsert = this ++= initialData
+//
+//    def initialData = Seq(
+//      Movie("Fake", "Fake movie", 1500, AGE_PG, PK[MovieTable](0)),
+//      Movie("Fake Four", "Fake movie 4", 1100, AGE_18, PK[MovieTable](0)),
+//      Movie("Fake Three", "Fake movie 3", 1300, AGE_PG, PK[MovieTable](0))
+//    )
 
     def readAllMovies(): Future[Try[Seq[Movie]]] = {
       db.run {
@@ -108,8 +107,7 @@ trait MovieModule { self: Profile =>
     def updateMovie(movie: Movie): Future[Int] = {
       // Nice action, no multi-future hell
       val updateQuery = this.filter(m => m.id === movie.id)
-                            .map(u => (u.title -> u.description -> u.price).mapTo[Movie])
-                            .update(movie)
+                            .insertOrUpdate(movie)
       db.run(updateQuery)
     }
   }
