@@ -1,6 +1,6 @@
-package data.modules
+package api.data.modules
 
-import data.{Profile, modules}
+import api.data.{Profile, modules}
 import slick.lifted.Query
 
 import scala.concurrent.Future

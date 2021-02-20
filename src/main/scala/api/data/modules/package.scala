@@ -1,4 +1,4 @@
-package data
+package api.data
 
 import slick.lifted.{MappedTo, Query, Rep}
 import slick.memory.MemoryProfile.MappedColumnType
