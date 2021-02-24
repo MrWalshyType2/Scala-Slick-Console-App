@@ -112,6 +112,7 @@ trait CustomerModule { self: Profile =>
           customerLinks.createCustomerLinks(CustomerLink(customerPk, loginPk))
         })
       })
+
       db.run(insertedCustomerLinksTable.transactionally)
     }
 
@@ -150,14 +151,18 @@ trait CustomerModule { self: Profile =>
     }
 
     private def createFatCustomerFromLinks(links: CustomerLink) = {
-      val customer = customers.filter(_.id === links.customerId).result.head
 
-      val customerLogin = customerLogins.filter(_.id === links.customerLoginId).result.head
+      val q = for {
+        (c, cl) <- customers join customerLogins on { (cT, clT) =>
+          (cT.id === links.customerId && clT.id === links.customerLoginId)
+        }
+      } yield (c.forename, c.surname, cl.email, cl.password)
 
-      for {
-        c <- customer
-        cl <- customerLogin
-      } yield FatCustomer(c.forename, c.surname, cl.email, cl.password)
+      q.result.map { (c) =>
+        // eww
+        FatCustomer(c.head._1, c.head._2, c.head._3, c.head._4)
+      }
+
     }
 
   }
