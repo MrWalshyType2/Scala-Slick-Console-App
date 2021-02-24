@@ -4,6 +4,7 @@ import api.data.modules.FatCustomer
 import api.data.service.CustomerService
 import app.Runner.customerService
 
+import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.{Duration, MILLISECONDS}
 import scala.concurrent.{Await, Future}
@@ -17,9 +18,11 @@ object Runner extends App {
   val menu: String =
     s"MENU\n${"=" * 10}\nREGISTER: R\nLOGIN: L\n"
 
-  println(s"WELCOME\n")
+  runnerLoop()
 
-  do {
+  @tailrec
+  def runnerLoop(): Unit = {
+    println(s"WELCOME\n")
 
     println(menu)
     val in = readLine()
@@ -44,15 +47,19 @@ object Runner extends App {
       case _ => println("Invalid input")
     }
 
-  } while (true)
+    if (!in.equalsIgnoreCase("Q")) runnerLoop()
+  }
 
   def loggedInLoop(user: FatCustomer): Unit = {
     println(s"${user.forename} ${user.surname} LOGGED IN SUCCESSFULLY!\n\n")
     do {
       println("CURRENT MOVIES - M\nVIEW AVAILABLE BOOKINGS - V\nBOOK TICKETS - B\nLOG OUT - L")
       val in = readLine()
+
+
     } while(true)
   }
+
 
   def register(): Unit = {
     println("FORENAME: ")

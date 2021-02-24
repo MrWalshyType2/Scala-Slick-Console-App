@@ -1,6 +1,8 @@
 package api.data.modules
 
 import api.data.{Profile, modules}
+import slick.jdbc.JdbcProfile
+import slick.migration.api._
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -12,7 +14,9 @@ trait CustomerModule { self: Profile =>
 
   import profile.api._
 
-  case class Customer(forename: String, surname: String, id: PK[CustomerTable] = PK(0))
+  val db = Database.forConfig("mysqlDB")
+
+  case class Customer(forename: String, surname: String, role: Option[String] = None, id: PK[CustomerTable] = PK(0))
   case class CustomerLink(customerId: PK[CustomerTable], customerLoginId: PK[CustomerLoginTable], id: PK[CustomerLinkTable] = PK(0))
   case class CustomerLogin(email: String, password: String, id: PK[CustomerLoginTable] = PK(0))
 
@@ -21,8 +25,9 @@ trait CustomerModule { self: Profile =>
     def id = column[PK[CustomerTable]]("ID", O.PrimaryKey, O.AutoInc)
     def forename = column[String]("FORENAME")
     def surname = column[String]("SURNAME")
+    def role = column[Option[String]]("ROLE")
 
-    def * = (forename, surname, id).mapTo[Customer]
+    def * = (forename, surname, role, id).mapTo[Customer]
   }
 
   final class CustomerLinkTable(tag: Tag) extends Table[CustomerLink](tag, "customer_details") {
@@ -49,13 +54,11 @@ trait CustomerModule { self: Profile =>
 
   private object customers extends TableQuery(new CustomerTable(_)) {
 
-    val db = Database.forConfig("mysqlDB")
-
     lazy val numOfCustomers = this.distinct.size
     lazy val dropCustomersTable = this.schema.dropIfExists
     lazy val createCustomersTable = this.schema.createIfNotExists
 
-    def readAllCustomers = this.result.asTry
+    def readAllCustomers = this.result
     def readCustomer(id: PK[CustomerTable]) = this.filter(_.id === id).result.headOption
     def createCustomer(customer: Customer) = this returning this.map(_.id) += customer
     def updateCustomer(customer: Customer) = this.filter(c => c.id === customer.id).insertOrUpdate(customer)
@@ -64,13 +67,11 @@ trait CustomerModule { self: Profile =>
 
   private object customerLogins extends TableQuery(new CustomerLoginTable(_)) {
 
-    val db = Database.forConfig("mysqlDB")
-
     lazy val numOfCustomerLogins = this.distinct.size
     lazy val dropCustomerLoginsTable = this.schema.dropIfExists
     lazy val createCustomerLoginsTable = this.schema.createIfNotExists
 
-    def readAllCustomerLogins = this.result.asTry
+    def readAllCustomerLogins = this.result
     def readCustomerLogin(id: PK[CustomerLoginTable]) = this.filter(_.id === id).result.headOption
     def createCustomerLogin(customer: CustomerLogin) = this returning this.map(_.id) += customer
     def updateCustomerLogin(customer: CustomerLogin) = this.filter(c => c.id === customer.id).insertOrUpdate(customer)
@@ -79,13 +80,11 @@ trait CustomerModule { self: Profile =>
 
   private object customerLinks extends TableQuery(new CustomerLinkTable(_)) {
 
-    val db = Database.forConfig("mysqlDB")
-
     lazy val numOfCustomerLinks = this.distinct.size
     lazy val dropCustomerLinksTable = this.schema.dropIfExists
     lazy val createCustomerLinksTable = this.schema.createIfNotExists
 
-    def readAllCustomerLinks = this.result.asTry
+    def readAllCustomerLinks = this.result
     def readCustomerLinks(id: PK[CustomerLinkTable]) = this.filter(_.id === id).result.headOption
     def createCustomerLinks(customer: CustomerLink) = this returning this.map(_.id) += customer
     def updateCustomerLinks(customer: CustomerLink) = this.filter(c => c.id === customer.id).insertOrUpdate(customer)
@@ -93,8 +92,6 @@ trait CustomerModule { self: Profile =>
   }
 
   object customerInterface {
-
-    val db = Database.forConfig("mysqlDB")
 
     def createDbs = {
       val seq = DBIO.seq(customers.createCustomersTable,
@@ -114,6 +111,21 @@ trait CustomerModule { self: Profile =>
       })
 
       db.run(insertedCustomerLinksTable.transactionally)
+    }
+
+    def readAllCustomers() = {
+
+      val query = for {
+        link <- customerLinks
+        customer <- link.customer
+        customerLogin <- link.customerLogin
+      } yield (customer.forename, customer.surname, customerLogin.email, customerLogin.password)
+
+      val fatCustomerQuery = query.result.map(c => {
+        c.map(cl => FatCustomer(cl._1, cl._2, cl._3, cl._4))
+      })
+
+      db.run(fatCustomerQuery)
     }
 
     def readCustomerByLinkTableId(id: Long) = {

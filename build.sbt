@@ -4,6 +4,9 @@ version := "0.1"
 
 scalaVersion := "2.13.4"
 
+resolvers += Resolver.sonatypeRepo("snapshots")
+resolvers += Resolver.jcenterRepo
+
 libraryDependencies ++= Seq(
   "org.scalatest" %% "scalatest" % "3.2.2" % "test",
   "org.mockito" % "mockito-core" % "2.7.22" % "test",
@@ -17,5 +20,5 @@ libraryDependencies ++= Seq(
   "ch.qos.logback" % "logback-classic" % "1.2.3",
   "com.typesafe.slick" %% "slick-hikaricp" % "3.3.3",
   "mysql" % "mysql-connector-java" % "8.0.23",
-  "com.h2database" % "h2" % "1.4.197"
+  "com.h2database" % "h2" % "1.4.197",
 )

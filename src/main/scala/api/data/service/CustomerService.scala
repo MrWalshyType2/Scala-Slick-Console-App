@@ -5,6 +5,7 @@ import api.data.modules.{CustomerModule, FatCustomer, PK}
 import api.data.service.layer.CustomerLayer
 import slick.jdbc.JdbcProfile
 
+import scala.collection.immutable.{AbstractSeq, LinearSeq}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
 import scala.util.{Failure, Success, Try}
@@ -24,7 +25,9 @@ class CustomerService(profile: JdbcProfile) {
     })
   }
 
-  def readAll(): Future[Option[Seq[FatCustomer]]] = ???
+  def readAll(): Future[Seq[FatCustomer]] = {
+    customerDbLayer.customerInterface.readAllCustomers()
+  }
 
   def update(element: FatCustomer): Future[Int] = ???
 
